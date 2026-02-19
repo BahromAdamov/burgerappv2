@@ -180,7 +180,7 @@ export const App: React.FC = () => {
       total: cartTotal, 
       comment: orderComment, 
       restaurant: selectedRestaurant,
-      tgUser: tg.initDataUnsafe.user || { id: "unknown", first_name: customerData.name }
+      tgUser: tg.initDataUnsafe?.user || { id: "unknown", first_name: customerData.name }
     };
 
     try {
