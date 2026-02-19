@@ -206,6 +206,7 @@ export const App: React.FC = () => {
       total: cartTotal, 
       comment: orderComment, 
       restaurant: selectedRestaurant,
+      restaurantId: selectedRestaurant.id,
       tgUser: tg?.initDataUnsafe?.user || { id: "unknown", first_name: customerData.name }
     };
 
@@ -257,26 +258,7 @@ export const App: React.FC = () => {
       let msg = e.message;
       if (msg === 'Failed to fetch') msg = 'Проблема с интернетом или сервером.';
 
-      try {
-        const serializedPayload = JSON.stringify(payload);
-        await fetch(BACKEND_API_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: serializedPayload
-        });
-
-        const pendingOrderId = `PENDING-${Date.now()}`;
-        setActiveOrderId(pendingOrderId);
-        localStorage.setItem('sd_active_order_id', pendingOrderId);
-        setCart([]);
-        safeShowAlert('Заказ отправлен в режиме совместимости. Если бот не ответит в течение 1-2 минут, повторите отправку.');
-        return;
-      } catch (noCorsError) {
-        console.error('No-CORS fallback failed:', noCorsError);
-      }
-
-      safeShowAlert("Не удалось отправить заказ. " + msg);
+      safeShowAlert("Не удалось отправить заказ. " + msg + " Проверьте интернет и попробуйте ещё раз.");
     } finally {
       setIsSending(false);
       tg?.MainButton?.hideProgress();
