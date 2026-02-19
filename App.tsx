@@ -68,6 +68,28 @@ const parseOptions = (val: string | undefined): ProductOption[] | undefined => {
   return opts.length > 0 ? opts : undefined;
 };
 
+
+const postOrderWithXhr = (url: string, payload: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-Type', 'text/plain');
+    xhr.timeout = 15000;
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.responseText || '');
+      } else {
+        reject(new Error(`XHR ${xhr.status}: ${(xhr.responseText || '').slice(0, 120)}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('XHR network error'));
+    xhr.ontimeout = () => reject(new Error('XHR timeout'));
+    xhr.send(payload);
+  });
+};
+
 export const App: React.FC = () => {
   const tg = window.Telegram?.WebApp;
   
@@ -158,14 +180,18 @@ export const App: React.FC = () => {
   };
 
   const handleCheckout = useCallback(async () => {
-    if (!tg || isSending || cart.length === 0) return;
+    if (isSending || cart.length === 0) return;
+    if (!selectedRestaurant) {
+      safeShowAlert("Выберите филиал перед оформлением заказа");
+      return;
+    }
     if (customerData.name.length < 2 || customerData.phone.length < 5) {
       safeShowAlert("Пожалуйста, заполните имя и телефон");
       return;
     }
 
     setIsSending(true);
-    tg.MainButton.showProgress(false);
+    tg?.MainButton?.showProgress(false);
     
     const payload = { 
       type: 'order',
@@ -180,20 +206,30 @@ export const App: React.FC = () => {
       total: cartTotal, 
       comment: orderComment, 
       restaurant: selectedRestaurant,
-      tgUser: tg.initDataUnsafe.user || { id: "unknown", first_name: customerData.name }
+      tgUser: tg?.initDataUnsafe?.user || { id: "unknown", first_name: customerData.name }
     };
 
     try {
-      // ИСПОЛЬЗУЕМ text/plain для обхода CORS в Google Apps Script
-      const res = await fetch(BACKEND_API_URL, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'text/plain' }, 
-        body: JSON.stringify(payload) 
-      });
+      const serializedPayload = JSON.stringify(payload);
+      let textResponse = '';
 
-      // Сначала получаем текст, чтобы увидеть ошибку, если она не в JSON
-      const textResponse = await res.text();
-      
+      try {
+        const res = await fetch(BACKEND_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: serializedPayload
+        });
+
+        textResponse = await res.text();
+
+        if (!res.ok) {
+          throw new Error(`Сервер вернул ${res.status}. ${textResponse.slice(0, 120)}`);
+        }
+      } catch (fetchError) {
+        console.warn('Fetch order request failed, trying XHR fallback...', fetchError);
+        textResponse = await postOrderWithXhr(BACKEND_API_URL, serializedPayload);
+      }
+
       // Проверяем на HTML ответ (ошибка доступа Google Script)
       if (textResponse.trim().startsWith('<!DOCTYPE html') || textResponse.includes('Google Accounts')) {
          throw new Error("⚠️ Ошибка настройки! Скрипт Google недоступен. Убедитесь, что при Deploy вы выбрали 'Who has access: Anyone' (Все).");
@@ -223,7 +259,7 @@ export const App: React.FC = () => {
       safeShowAlert("Не удалось отправить заказ. " + msg);
     } finally {
       setIsSending(false);
-      tg.MainButton.hideProgress();
+      tg?.MainButton?.hideProgress();
     }
   }, [tg, isSending, customerData, cart, cartTotal, orderComment, selectedRestaurant]);
 
@@ -361,7 +397,7 @@ export const App: React.FC = () => {
           <Cart items={cart} onUpdateQuantity={(id, delta, opt) => {
             setCart(p => p.map(i => (i.id === id && i.selectedOption?.name === opt) ? {...i, quantity: Math.max(0, i.quantity + delta)} : i).filter(i => i.quantity > 0));
             safeHaptic('light');
-          }} customerData={customerData as any} selectedRestaurant={selectedRestaurant} onCustomerDataChange={(f,v) => setCustomerData(p => ({...p, [f]: v}))} comment={orderComment} onCommentChange={setOrderComment} />
+          }} customerData={customerData as any} selectedRestaurant={selectedRestaurant} onCustomerDataChange={(f,v) => setCustomerData(p => ({...p, [f]: v}))} comment={orderComment} onCommentChange={setOrderComment} onCheckout={handleCheckout} isSending={isSending} />
         )}
       </main>
 

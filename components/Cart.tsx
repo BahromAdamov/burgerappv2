@@ -19,9 +19,11 @@ interface CartProps {
   onCustomerDataChange: (f: string, v: string) => void;
   comment: string;
   onCommentChange: (v: string) => void;
+  onCheckout: () => void;
+  isSending: boolean;
 }
 
-const Cart: React.FC<CartProps> = ({ items, onUpdateQuantity, customerData, selectedRestaurant, onCustomerDataChange, comment, onCommentChange }) => {
+const Cart: React.FC<CartProps> = ({ items, onUpdateQuantity, customerData, selectedRestaurant, onCustomerDataChange, comment, onCommentChange, onCheckout, isSending }) => {
   const total = items.reduce((sum, item) => {
     const price = item.selectedOption ? item.selectedOption.price : item.price;
     return sum + price * item.quantity;
@@ -199,6 +201,15 @@ const Cart: React.FC<CartProps> = ({ items, onUpdateQuantity, customerData, sele
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={onCheckout}
+        disabled={isSending}
+        className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 ${isSending ? 'bg-gray-200 text-gray-400' : 'bg-black text-[#FF7A00] shadow-xl'}`}
+      >
+        {isSending ? 'Отправляем...' : `Оформить заказ • ${total.toLocaleString()} сум`}
+      </button>
     </div>
   );
 };
