@@ -257,25 +257,23 @@ export const App: React.FC = () => {
       let msg = e.message;
       if (msg === 'Failed to fetch') msg = 'Проблема с интернетом или сервером.';
 
-      const canUseTelegramFallback = !!tg?.sendData;
-      if (canUseTelegramFallback) {
-        try {
-          const fallbackOrderId = `TMP-${Date.now()}`;
-          tg.sendData(JSON.stringify({
-            type: 'order_fallback',
-            orderId: fallbackOrderId,
-            createdAt: new Date().toISOString(),
-            payload
-          }));
+      try {
+        const serializedPayload = JSON.stringify(payload);
+        await fetch(BACKEND_API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: serializedPayload
+        });
 
-          setActiveOrderId(fallbackOrderId);
-          localStorage.setItem('sd_active_order_id', fallbackOrderId);
-          setCart([]);
-          safeShowAlert('Сервер недоступен. Заказ отправлен через Telegram-бота, ожидайте подтверждения.');
-          return;
-        } catch (telegramFallbackError) {
-          console.error('Telegram sendData fallback failed:', telegramFallbackError);
-        }
+        const pendingOrderId = `PENDING-${Date.now()}`;
+        setActiveOrderId(pendingOrderId);
+        localStorage.setItem('sd_active_order_id', pendingOrderId);
+        setCart([]);
+        safeShowAlert('Заказ отправлен в режиме совместимости. Если бот не ответит в течение 1-2 минут, повторите отправку.');
+        return;
+      } catch (noCorsError) {
+        console.error('No-CORS fallback failed:', noCorsError);
       }
 
       safeShowAlert("Не удалось отправить заказ. " + msg);
