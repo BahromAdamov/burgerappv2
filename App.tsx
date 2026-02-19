@@ -369,7 +369,7 @@ export const App: React.FC = () => {
           <Cart items={cart} onUpdateQuantity={(id, delta, opt) => {
             setCart(p => p.map(i => (i.id === id && i.selectedOption?.name === opt) ? {...i, quantity: Math.max(0, i.quantity + delta)} : i).filter(i => i.quantity > 0));
             safeHaptic('light');
-          }} customerData={customerData as any} selectedRestaurant={selectedRestaurant} onCustomerDataChange={(f,v) => setCustomerData(p => ({...p, [f]: v}))} comment={orderComment} onCommentChange={setOrderComment} />
+          }} customerData={customerData as any} selectedRestaurant={selectedRestaurant} onCustomerDataChange={(f,v) => setCustomerData(p => ({...p, [f]: v}))} comment={orderComment} onCommentChange={setOrderComment} onCheckout={handleCheckout} isSending={isSending} />
         )}
       </main>
 
