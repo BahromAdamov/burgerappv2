@@ -158,14 +158,18 @@ export const App: React.FC = () => {
   };
 
   const handleCheckout = useCallback(async () => {
-    if (!tg || isSending || cart.length === 0) return;
+    if (isSending || cart.length === 0) return;
+    if (!selectedRestaurant) {
+      safeShowAlert("Выберите филиал перед оформлением заказа");
+      return;
+    }
     if (customerData.name.length < 2 || customerData.phone.length < 5) {
       safeShowAlert("Пожалуйста, заполните имя и телефон");
       return;
     }
 
     setIsSending(true);
-    tg.MainButton.showProgress(false);
+    tg?.MainButton?.showProgress(false);
     
     const payload = { 
       type: 'order',
@@ -180,7 +184,7 @@ export const App: React.FC = () => {
       total: cartTotal, 
       comment: orderComment, 
       restaurant: selectedRestaurant,
-      tgUser: tg.initDataUnsafe?.user || { id: "unknown", first_name: customerData.name }
+      tgUser: tg?.initDataUnsafe?.user || { id: "unknown", first_name: customerData.name }
     };
 
     try {
@@ -193,6 +197,10 @@ export const App: React.FC = () => {
 
       // Сначала получаем текст, чтобы увидеть ошибку, если она не в JSON
       const textResponse = await res.text();
+
+      if (!res.ok) {
+        throw new Error(`Сервер вернул ${res.status}. ${textResponse.slice(0, 120)}`);
+      }
       
       // Проверяем на HTML ответ (ошибка доступа Google Script)
       if (textResponse.trim().startsWith('<!DOCTYPE html') || textResponse.includes('Google Accounts')) {
@@ -223,7 +231,7 @@ export const App: React.FC = () => {
       safeShowAlert("Не удалось отправить заказ. " + msg);
     } finally {
       setIsSending(false);
-      tg.MainButton.hideProgress();
+      tg?.MainButton?.hideProgress();
     }
   }, [tg, isSending, customerData, cart, cartTotal, orderComment, selectedRestaurant]);
 
