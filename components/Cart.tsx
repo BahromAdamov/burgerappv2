@@ -208,7 +208,7 @@ const Cart: React.FC<CartProps> = ({ items, onUpdateQuantity, customerData, sele
         disabled={isSending}
         className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 ${isSending ? 'bg-gray-200 text-gray-400' : 'bg-black text-[#FF7A00] shadow-xl'}`}
       >
-        {isSending ? 'Отправляем...' : `Заказать в Telegram • ${total.toLocaleString()} сум`}
+        {isSending ? 'Отправляем...' : `Оформить заказ • ${total.toLocaleString()} сум`}
       </button>
     </div>
   );
