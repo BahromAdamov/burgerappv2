@@ -256,6 +256,28 @@ export const App: React.FC = () => {
       console.error(e);
       let msg = e.message;
       if (msg === 'Failed to fetch') msg = 'Проблема с интернетом или сервером.';
+
+      const canUseTelegramFallback = !!tg?.sendData;
+      if (canUseTelegramFallback) {
+        try {
+          const fallbackOrderId = `TMP-${Date.now()}`;
+          tg.sendData(JSON.stringify({
+            type: 'order_fallback',
+            orderId: fallbackOrderId,
+            createdAt: new Date().toISOString(),
+            payload
+          }));
+
+          setActiveOrderId(fallbackOrderId);
+          localStorage.setItem('sd_active_order_id', fallbackOrderId);
+          setCart([]);
+          safeShowAlert('Сервер недоступен. Заказ отправлен через Telegram-бота, ожидайте подтверждения.');
+          return;
+        } catch (telegramFallbackError) {
+          console.error('Telegram sendData fallback failed:', telegramFallbackError);
+        }
+      }
+
       safeShowAlert("Не удалось отправить заказ. " + msg);
     } finally {
       setIsSending(false);
