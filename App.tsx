@@ -179,6 +179,52 @@ export const App: React.FC = () => {
     trackEvent('registration_complete', { name: d.name });
   };
 
+  const handleTelegramCheckout = useCallback(() => {
+    if (isSending || cart.length === 0) return;
+    if (!selectedRestaurant) {
+      safeShowAlert("Выберите филиал перед оформлением заказа");
+      return;
+    }
+    if (customerData.name.length < 2 || customerData.phone.length < 5) {
+      safeShowAlert("Пожалуйста, заполните имя и телефон");
+      return;
+    }
+
+    const payload = {
+      type: 'order',
+      source: 'telegram_webapp_direct',
+      ...customerData,
+      items: cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.selectedOption ? item.selectedOption.price : item.price,
+        quantity: item.quantity,
+        option: item.selectedOption ? item.selectedOption.name : null
+      })),
+      total: cartTotal,
+      comment: orderComment,
+      restaurant: selectedRestaurant,
+      restaurantId: selectedRestaurant.id,
+      tgUser: tg?.initDataUnsafe?.user || { id: 'unknown', first_name: customerData.name }
+    };
+
+    if (tg?.sendData) {
+      try {
+        tg.sendData(JSON.stringify(payload));
+        const sentOrderId = `TG-${Date.now()}`;
+        setActiveOrderId(sentOrderId);
+        localStorage.setItem('sd_active_order_id', sentOrderId);
+        setCart([]);
+        safeHaptic('success');
+        return;
+      } catch (e) {
+        console.error('sendData failed', e);
+      }
+    }
+
+    safeShowAlert("Не удалось отправить напрямую в Telegram. Проверьте, что приложение открыто из бота.");
+  }, [tg, isSending, cart, customerData, cartTotal, orderComment, selectedRestaurant]);
+
   const handleCheckout = useCallback(async () => {
     if (isSending || cart.length === 0) return;
     if (!selectedRestaurant) {
@@ -399,7 +445,7 @@ export const App: React.FC = () => {
           <Cart items={cart} onUpdateQuantity={(id, delta, opt) => {
             setCart(p => p.map(i => (i.id === id && i.selectedOption?.name === opt) ? {...i, quantity: Math.max(0, i.quantity + delta)} : i).filter(i => i.quantity > 0));
             safeHaptic('light');
-          }} customerData={customerData as any} selectedRestaurant={selectedRestaurant} onCustomerDataChange={(f,v) => setCustomerData(p => ({...p, [f]: v}))} comment={orderComment} onCommentChange={setOrderComment} onCheckout={handleCheckout} isSending={isSending} />
+          }} customerData={customerData as any} selectedRestaurant={selectedRestaurant} onCustomerDataChange={(f,v) => setCustomerData(p => ({...p, [f]: v}))} comment={orderComment} onCommentChange={setOrderComment} onCheckout={handleTelegramCheckout} isSending={isSending} />
         )}
       </main>
 
