@@ -281,7 +281,7 @@ export const App: React.FC = () => {
 
   if (!isRegistered) return <Onboarding onConfirm={handleRegistrationComplete} />;
 
-  if (!selectedRestaurant) return <RestaurantSelector currentId={selectedRestaurant?.id} onSelect={(r) => { setSelectedRestaurant(r); safeHaptic('medium'); }} />;
+  if (!selectedRestaurant) return <RestaurantSelector onSelect={(r) => { setSelectedRestaurant(r); safeHaptic('medium'); }} />;
   
   if (!orderTypeChosen) return (
     <OrderTypeSelector onSelect={(type, addr) => { 
