@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MapPin, Clock, ChevronRight, Navigation, Phone, CheckCircle2 } from 'lucide-react';
+import { MapPin, ChevronRight, Phone, CheckCircle2 } from 'lucide-react';
 import { StreetDogLogo } from './StreetDogLogo';
 import { BRAND_ORANGE } from '../constants';
 import { Restaurant } from '../App';
@@ -11,25 +11,27 @@ interface RestaurantSelectorProps {
 }
 
 // ВАЖНО: ID филиалов (branch_1, branch_2) должны совпадать с ключами в Google Apps Script
-const LOCATIONS: Restaurant[] = [
+export const LOCATIONS: Restaurant[] = [
   {
     id: 'branch_1',
     name: 'STREET DOG (Центр)',
     address: 'ул. Аль-Хоразмий 71',
-    phone: '+998 91 996-40-40'
+    phone: '+998 91 996-40-40',
+    image: 'https://lh3.googleusercontent.com/d/1y-X2kZl-Q9q-w-e-r-t-y-u-i-o-p-a-s-d-f-g-h-j-k-l-z-x-c-v-b-n-m' // Placeholder, will be replaced
   },
   {
     id: 'branch_2',
     name: 'STREET DOG (Филиал 2)',
     address: 'ул. Хонка 175',
-    phone: '+998 97 288-40-40'
+    phone: '+998 97 288-40-40',
+    image: 'https://lh3.googleusercontent.com/d/1a-s-d-f-g-h-j-k-l-z-x-c-v-b-n-m-q-w-e-r-t-y-u-i-o-p' // Placeholder, will be replaced
   }
 ];
 
 const RestaurantSelector: React.FC<RestaurantSelectorProps> = ({ currentId, onSelect }) => {
   return (
     <div className="fixed inset-0 z-[90] bg-white flex flex-col animate-in fade-in duration-500 overflow-hidden">
-      <div className="p-6 pt-10 rounded-b-[3rem] shadow-xl text-center relative z-10" style={{ backgroundColor: BRAND_ORANGE }}>
+      <div className="p-6 pt-6 rounded-b-[3rem] shadow-xl text-center relative z-10" style={{ backgroundColor: BRAND_ORANGE }}>
         <StreetDogLogo className="h-12 mx-auto drop-shadow-lg mb-3" iconColor="white" textColor="black" />
         <h2 className="text-xl font-black text-black uppercase italic tracking-tighter mb-0.5">Где заказываем?</h2>
         <p className="text-[9px] font-black text-black/60 uppercase tracking-widest">Выберите ближайший филиал</p>
@@ -58,15 +60,25 @@ const RestaurantSelector: React.FC<RestaurantSelectorProps> = ({ currentId, onSe
                 )}
               </div>
               
-              <div className="space-y-0.5">
-                <h3 className="text-base font-black text-gray-900 uppercase italic tracking-tight">{loc.name}</h3>
-                <p className="text-[10px] font-medium text-gray-400 leading-tight line-clamp-1">{loc.address}</p>
-                {loc.phone && (
-                  <div className="flex items-center gap-1 mt-1 text-gray-500 bg-gray-50 w-fit px-2 py-0.5 rounded-lg border border-gray-100">
-                    <Phone className="w-2.5 h-2.5 text-[#FF7800]" />
-                    <span className="text-[9px] font-bold">{loc.phone}</span>
-                  </div>
+              <div className="flex items-center gap-3">
+                {loc.image && (
+                  <img 
+                    src={loc.image} 
+                    alt={loc.name} 
+                    className="w-12 h-12 rounded-lg object-cover border border-gray-200 shadow-sm"
+                    referrerPolicy="no-referrer"
+                  />
                 )}
+                <div className="space-y-0.5 flex-1">
+                  <h3 className="text-base font-black text-gray-900 uppercase italic tracking-tight">{loc.name}</h3>
+                  <p className="text-[10px] font-medium text-gray-400 leading-tight line-clamp-1">{loc.address}</p>
+                  {loc.phone && (
+                    <div className="flex items-center gap-1 mt-1 text-gray-500 bg-gray-50 w-fit px-2 py-0.5 rounded-lg border border-gray-100">
+                      <Phone className="w-2.5 h-2.5 text-[#FF7800]" />
+                      <span className="text-[9px] font-bold">{loc.phone}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-end mt-1 pt-3 border-t border-gray-100 w-full">

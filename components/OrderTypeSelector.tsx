@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Truck, Store, ChevronRight, MapPin, Package, ArrowLeft, CheckCircle2, Loader2, LocateFixed, MessageSquare, Compass } from 'lucide-react';
+import { Truck, Store, ChevronRight, MapPin, Package, ArrowLeft, CheckCircle2, Loader2, MessageSquare, Compass } from 'lucide-react';
 import { StreetDogLogo } from './StreetDogLogo';
 import { safeShowAlert, safeHaptic } from '../utils';
 import { BRAND_ORANGE } from '../constants';
@@ -54,13 +54,13 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect }) => {
             setAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
             safeShowAlert("Адрес определен в виде координат.");
           }
-        } catch (e) {
+        } catch {
           setAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
         } finally {
           setIsLocating(false);
         }
       },
-      (err) => {
+      () => {
         safeShowAlert("Не удалось получить доступ к GPS. Введите адрес вручную.");
         setIsLocating(false);
       },
@@ -84,7 +84,7 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect }) => {
 
   return (
     <div className="fixed inset-0 z-[85] bg-white flex flex-col animate-in fade-in duration-500 overflow-hidden">
-      <div className="p-6 pt-10 rounded-b-3xl shadow-lg text-center shrink-0" style={{ backgroundColor: BRAND_ORANGE }}>
+      <div className="p-6 pt-6 rounded-b-3xl shadow-lg text-center shrink-0" style={{ backgroundColor: BRAND_ORANGE }}>
         <StreetDogLogo className="h-10 mx-auto drop-shadow-md mb-3" iconColor="white" textColor="black" />
         <h2 className="text-xl font-black text-black uppercase italic tracking-tighter mb-0.5 leading-none">
           {view === 'selection' ? 'Как заберёте?' : 'Адрес доставки'}

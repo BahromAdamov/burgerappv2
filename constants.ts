@@ -6,17 +6,20 @@ export const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2P
 
 /**
  * URL Google Apps Script для записи заказов.
- * ВНИМАНИЕ: Если вы обновили скрипт, убедитесь, что создали НОВУЮ версию развертывания (New Deployment) в Google.
+ * ВНИМАНИЕ: После обновления кода в Google Script ОБЯЗАТЕЛЬНО сделайте NEW DEPLOYMENT 
+ * и обновите эту ссылку здесь.
  */
-export const BACKEND_API_URL = 'https://script.google.com/macros/s/AKfycbzXULgTiSpFIv_2yTxV0ViIX5OH8-kXDqzX60emXCOIl7ce23t8CQfSrtcr_F0MFUc/exec'; 
-
+export const BACKEND_API_URL = 'https://script.google.com/macros/s/AKfycbx0wuQ0rYgcTfTaCtHsQLWO-wCnukcyYKTkrzkYlZd31m3WmRyAv3m5UEtvtNHIvxCf/exec';
 export const BRAND_ORANGE = '#FF7800';
 
 /* 
 ===================================================================================
-ОБНОВЛЕННЫЙ КОД ДЛЯ GOOGLE APPS SCRIPT (v3.0 - FIX FETCH ERROR)
+ОБНОВЛЕННЫЙ КОД ДЛЯ GOOGLE APPS SCRIPT (v13.0 - КРАСИВЫЕ ЗАКАЗЫ И СТАТУСЫ)
 ===================================================================================
-Скопируйте этот код полностью в script.google.com, сохраните и сделайте DEPLOY -> NEW VERSION.
+1. Вставьте этот код в script.google.com.
+2. Нажмите Deploy -> New Deployment (Web App, Me, Anyone).
+3. Скопируйте полученный URL и обновите BACKEND_API_URL в constants.ts.
+4. Выполните функцию setWebhook (вставьте URL в нее перед запуском).
 
 var BRANCH_CONFIG = {
   "branch_1": { 
@@ -31,180 +34,243 @@ var BRANCH_CONFIG = {
   }
 };
 
-function doPost(e) {
-  var lock = LockService.getScriptLock();
-  // Пытаемся получить лок. Если сервер занят более 10 сек, возвращаем JSON ошибку вместо 500 HTML (чтобы не было CORS error)
-  if (!lock.tryLock(10000)) {
-    return response({ status: 'error', message: 'Server is busy. Please try again.' });
+function setWebhook() {
+  var webAppUrl = "ВАША_ССЫЛКА_ПОСЛЕ_DEPLOY_ЗДЕСЬ"; 
+  for (var key in BRANCH_CONFIG) {
+    var token = BRANCH_CONFIG[key].botToken;
+    UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/setWebhook?url=" + webAppUrl);
   }
+}
 
+function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var contents;
-    if (e && e.postData && e.postData.contents) {
-      contents = JSON.parse(e.postData.contents);
-    } else {
-      return response({ status: 'error', message: 'No data found' });
-    }
+    if (!e || !e.postData || !e.postData.contents) return response({ status: 'error' });
+    var contents = JSON.parse(e.postData.contents);
 
-    if (contents.type === 'order') {
-      var sheet = getOrCreateSheet(ss, "Orders");
-      var orderId = "SD-" + Math.floor(1000 + Math.random() * 9000); 
-      
-      var itemsStr = contents.items.map(function(i) { 
-        return i.name + (i.option ? " (" + i.option + ")" : "") + " x" + i.quantity; 
-      }).join("\n");
+    // А) ОБРАБОТКА НАЖАТИЯ КНОПОК
+    if (contents.callback_query) return handleTelegramCallback(contents.callback_query, ss);
 
-      sheet.appendRow([
-        new Date(), 
-        orderId, 
-        "pending", 
-        contents.restaurant.name, 
-        contents.name, 
-        "'"+contents.phone,
-        contents.orderType, 
-        contents.total, 
-        itemsStr, 
-        contents.comment, 
-        contents.address,
-        contents.tgUser ? contents.tgUser.id : "unknown"
-      ]);
-
-      try {
-        sendOrderToTelegram(contents, orderId, itemsStr);
-      } catch (tgError) {
-        getOrCreateSheet(ss, "Debug").appendRow([new Date(), "TG Error", tgError.toString()]);
-      }
-      
-      return response({ status: 'success', orderId: orderId });
-    }
-
+    // В) ОБРАБОТКА РЕГИСТРАЦИИ ПОЛЬЗОВАТЕЛЯ
     if (contents.type === 'registration') {
       var userSheet = getOrCreateSheet(ss, "Users");
-      userSheet.appendRow([new Date(), contents.tgUser ? contents.tgUser.id : "", contents.name, contents.phone]);
-      return response({ status: 'registered' });
+      var tgUser = contents.tgUser || {};
+      userSheet.appendRow([
+        new Date(), 
+        contents.name, 
+        "'" + contents.phone, 
+        contents.address || "N/A",
+        tgUser.id || "N/A", 
+        tgUser.username || "N/A", 
+        contents.platform || "web"
+      ]);
+      return response({ status: 'success' });
     }
 
-    // Для аналитики
+    // Г) ОБРАБОТКА АНАЛИТИКИ
     if (contents.type === 'analytics') {
-      var sheet = getOrCreateSheet(ss, "Analytics");
-      sheet.appendRow([new Date(), contents.event, JSON.stringify(contents.data), contents.user.id]);
-      return response({ status: 'ok' });
-    }
-    
-    return response({ status: 'unknown_type' });
-
-  } catch (error) {
-    return response({ status: 'error', message: error.toString() });
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function doGet(e) {
-  var lock = LockService.getScriptLock();
-  lock.tryLock(5000); // Короткий лок для чтения
-
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-
-    // 1. ПРОВЕРКА СТАТУСА (polling)
-    if (e.parameter.orderId) {
-      var sheet = ss.getSheetByName("Orders");
-      if (!sheet) return response({ status: 'not_found' });
-      
-      // Читаем последние 50 строк для скорости, вместо всей таблицы
-      var lastRow = sheet.getLastRow();
-      var startRow = Math.max(2, lastRow - 50);
-      var data = sheet.getRange(startRow, 1, lastRow - startRow + 1, 3).getValues(); // Берем 3 колонки: Date, OrderId, Status
-      
-      // Ищем с конца (новые заказы внизу)
-      for (var i = data.length - 1; i >= 0; i--) {
-        if (data[i][1] == e.parameter.orderId) { // Column B is OrderId (index 1)
-          return response({ status: data[i][2] }); // Column C is Status (index 2)
-        }
-      }
-      return response({ status: 'pending' }); // Если не нашли, считаем pending
+      var analyticsSheet = getOrCreateSheet(ss, "Analytics");
+      analyticsSheet.appendRow([
+        new Date(), 
+        contents.event, 
+        JSON.stringify(contents.data), 
+        contents.user ? contents.user.id : "N/A",
+        contents.platform || "web"
+      ]);
+      return response({ status: 'success' });
     }
 
-    // 2. ИСТОРИЯ ЗАКАЗОВ
-    if (e.parameter.historyPhone) {
-      var phone = e.parameter.historyPhone.replace(/\D/g, ''); 
-      if (phone.length < 5) return response([]);
+    // Д) ОБРАБОТКА НОВОГО ЗАКАЗА ИЗ ПРИЛОЖЕНИЯ
+    if (contents.type === 'order') {
+      var sheet = getOrCreateSheet(ss, "Orders");
+      // Порядковый номер заказа (Заказ 0001)
+      var nextNum = sheet.getLastRow(); 
+      var orderId = "Заказ " + ("0000" + nextNum).slice(-4);
       
-      var sheet = ss.getSheetByName("Orders");
-      if (!sheet) return response([]);
+      var itemsStr = contents.items.map(function(i) { 
+        return "• " + i.name + (i.option ? " ("+i.option+")" : "") + " x" + i.quantity; 
+      }).join("\n");
       
-      var lastRow = sheet.getLastRow();
-      if (lastRow < 2) return response([]);
+      sheet.appendRow([
+        new Date(), orderId, "pending", contents.restaurant ? contents.restaurant.name : "N/A",
+        contents.name, "'"+contents.phone, contents.orderType, contents.total, itemsStr, 
+        contents.comment, contents.address || "Самовывоз"
+      ]);
 
-      var data = sheet.getRange(2, 1, lastRow - 1, 11).getValues(); // Читаем всё
-      var history = [];
-      
-      // Ищем совпадения по телефону (обратный порядок)
-      for (var i = data.length - 1; i >= 0; i--) {
-        var rowPhone = String(data[i][5]).replace(/\D/g, ''); // Col F is phone (index 5)
-        if (rowPhone.includes(phone) || phone.includes(rowPhone)) {
-          history.push({
-            date: data[i][0],
-            orderId: data[i][1],
-            status: data[i][2],
-            branch: data[i][3],
-            total: data[i][8],
-            items: data[i][8], // Bug fix: items is usually index 9, check doPost map
-            // Fix mapping based on doPost: 
-            // 0:Date, 1:Id, 2:Status, 3:Rest, 4:Name, 5:Phone, 6:Type, 7:Total, 8:Items, 9:Comment
-            // Wait, doPost: Date, OrderId, Status, Rest, Name, Phone, Type, Total, Items, Comment, Address...
-            // Indices: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-            items: data[i][8],
-            comment: data[i][9],
-            total: data[i][7]
-          });
-          if (history.length >= 10) break;
-        }
-      }
-      return response(history);
+      // Также логируем в аналитику
+      var analyticsSheet = getOrCreateSheet(ss, "Analytics");
+      analyticsSheet.appendRow([new Date(), "order_placed", orderId, contents.total, contents.items.length]);
+
+      var tgRes = sendOrderToTelegram(contents, orderId, itemsStr);
+      return response({ status: 'success', orderId: orderId });
     }
-
-    return response({ status: 'active', message: 'Script is running v3.0' });
   } catch (err) {
     return response({ status: 'error', message: err.toString() });
-  } finally {
-    lock.releaseLock();
   }
 }
 
-function getOrCreateSheet(ss, name) {
-  var sheet = ss.getSheetByName(name);
-  if (!sheet) sheet = ss.insertSheet(name);
-  return sheet;
+function handleTelegramCallback(cb, ss) {
+  var data = cb.data; 
+  var parts = data.split('_');
+  var action = parts[1]; // cooking, ready, cancelled, completed
+  var orderId = parts.slice(2).join('_').trim();
+  
+  var sheet = ss.getSheetByName("Orders");
+  var rows = sheet.getDataRange().getValues();
+  var newStatus = action;
+  
+  for (var i = rows.length - 1; i >= 1; i--) {
+    var sheetOrderId = rows[i][1].toString().trim();
+    if (sheetOrderId == orderId) {
+      var orderType = rows[i][6]; // pickup или delivery
+      if (action === 'ready') {
+        newStatus = (orderType === 'delivery') ? 'on_way' : 'ready_pickup';
+      }
+      sheet.getRange(i + 1, 3).setValue(newStatus);
+      break;
+    }
+  }
+
+  var statusLabels = { 
+    "cooking": "👨‍🍳 Готовится", 
+    "ready_pickup": "✅ ГОТОВО (Самовывоз)", 
+    "on_way": "🚴 Курьер везет", 
+    "completed": "🏁 ЗАВЕРШЕН",
+    "cancelled": "❌ ОТМЕНЕНО" 
+  };
+
+  var token = BRANCH_CONFIG["branch_1"].botToken;
+  for (var key in BRANCH_CONFIG) {
+    if (BRANCH_CONFIG[key].adminChatId == cb.message.chat.id) {
+      token = BRANCH_CONFIG[key].botToken;
+      break;
+    }
+  }
+
+  // Очищаем старый статус из текста, чтобы они не копились
+  var cleanText = cb.message.text.split('\n\nСТАТУС:')[0];
+  var newText = cleanText + "\n\n<b>СТАТУС: " + (statusLabels[newStatus] || newStatus) + "</b>";
+
+  // Обновляем кнопки: если готов/в пути, добавляем кнопку "Завершить"
+  var newKb = cb.message.reply_markup;
+  if (newStatus === 'ready_pickup' || newStatus === 'on_way') {
+    // Проверяем, нет ли уже кнопки "Завершить"
+    var hasCompleted = false;
+    for (var k=0; k<newKb.inline_keyboard.length; k++) {
+      if (newKb.inline_keyboard[k][0].callback_data.indexOf('completed') !== -1) { hasCompleted = true; break; }
+    }
+    if (!hasCompleted) {
+      newKb.inline_keyboard.push([{ text: "🏁 ЗАВЕРШИТЬ", callback_data: "status_completed_" + orderId }]);
+    }
+  } else if (newStatus === 'completed' || newStatus === 'cancelled') {
+    newKb = { inline_keyboard: [] }; // Убираем кнопки после завершения или отмены
+  }
+
+  UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/editMessageText", {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify({
+      chat_id: cb.message.chat.id,
+      message_id: cb.message.message_id,
+      text: newText,
+      parse_mode: "HTML",
+      reply_markup: newKb
+    })
+  });
+
+  return response({ status: 'ok' });
 }
 
 function sendOrderToTelegram(order, orderId, itemsStr) {
-  var config = BRANCH_CONFIG[order.restaurant.id] || BRANCH_CONFIG["branch_1"];
+  var config = (order.restaurant && BRANCH_CONFIG[order.restaurant.id]) ? BRANCH_CONFIG[order.restaurant.id] : BRANCH_CONFIG["branch_1"];
   
-  var message = "🔥 *ЗАКАЗ " + orderId + "*\n" +
-                "👤 *" + order.name + "*\n" +
-                "📞 " + order.phone + "\n" +
-                "📍 " + (order.orderType === 'delivery' ? "ДОСТАВКА" : "САМОВЫВОЗ") + "\n";
+  var info = "<b>🔥 НОВЫЙ " + orderId.toUpperCase() + "</b>\n\n" +
+             "👤 <b>Клиент:</b> " + order.name + "\n" +
+             "📞 <b>Телефон:</b> " + order.phone + "\n" +
+             "📍 <b>Тип:</b> " + (order.orderType === 'delivery' ? "🚀 Доставка" : "🥡 Самовывоз") + "\n";
   
-  if (order.orderType === 'delivery') message += "🏠 " + order.address + "\n";
-  if (order.comment) message += "💬 " + order.comment + "\n";
+  if (order.orderType === 'delivery') {
+    info += "🏠 <b>Адрес:</b> " + (order.address || "Не указан") + "\n";
+  }
   
-  message += "\n🛒 *ЗАКАЗ:*\n" + itemsStr + "\n\n" +
-             "💰 *ИТОГО: " + order.total.toLocaleString() + " СУМ*";
+  if (order.comment) {
+    info += "💬 <b>Комментарий:</b> " + order.comment + "\n";
+  }
 
-  var keyboard = {
-    inline_keyboard: [
-      [{ text: "👨‍🍳 Готовить", callback_data: "status_cooking_" + orderId }, { text: "✅ Выдан", callback_data: "status_completed_" + orderId }],
-      [{ text: "❌ Отмена", callback_data: "status_cancelled_" + orderId }]
-    ]
-  };
+  info += "\n🛒 <b>СОСТАВ ЗАКАЗА:</b>\n" + itemsStr + "\n\n" +
+          "💰 <b>ИТОГО: " + order.total.toLocaleString() + " СУМ</b>";
 
-  UrlFetchApp.fetch("https://api.telegram.org/bot" + config.botToken + "/sendMessage", {
+  var kb = { inline_keyboard: [
+    [{ text: "👨‍🍳 ПРИНЯТЬ", callback_data: "status_cooking_" + orderId }],
+    [{ text: "✅ ГОТОВ", callback_data: "status_ready_" + orderId }],
+    [{ text: "❌ ОТМЕНА", callback_data: "status_cancelled_" + orderId }]
+  ]};
+
+  return UrlFetchApp.fetch("https://api.telegram.org/bot" + config.botToken + "/sendMessage", {
     method: "post",
-    payload: { chat_id: config.adminChatId, text: message, parse_mode: "Markdown", reply_markup: JSON.stringify(keyboard) }
-  });
+    contentType: "application/json",
+    payload: JSON.stringify({ chat_id: config.adminChatId, text: info, parse_mode: "HTML", reply_markup: kb })
+  }).getContentText();
+}
+
+function doGet(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // 1. История заказов по номеру телефона
+  if (e.parameter.historyPhone) {
+    var phone = e.parameter.historyPhone.replace(/\D/g, '');
+    var sheet = ss.getSheetByName("Orders");
+    var data = sheet.getDataRange().getValues();
+    var history = [];
+    for (var i = data.length - 1; i >= 1; i--) {
+      var sheetPhone = data[i][5].toString().replace(/\D/g, '');
+      if (sheetPhone.indexOf(phone) !== -1 || phone.indexOf(sheetPhone) !== -1) {
+        history.push({
+          date: data[i][0],
+          orderId: data[i][1],
+          status: data[i][2],
+          branch: data[i][3],
+          type: data[i][6],
+          total: data[i][7],
+          items: data[i][8],
+          comment: data[i][9]
+        });
+      }
+      if (history.length >= 20) break; // Лимит 20 заказов
+    }
+    return response(history);
+  }
+
+  // 2. Статус конкретного заказа
+  var orderId = e.parameter.orderId;
+  if (orderId) {
+    var sheet = ss.getSheetByName("Orders");
+    var data = sheet.getDataRange().getValues();
+    for (var i = data.length - 1; i >= 1; i--) {
+      var sheetOrderId = data[i][1].toString().trim();
+      if (sheetOrderId == orderId.trim()) {
+        return response({ status: data[i][2] || 'pending' });
+      }
+    }
+    return response({ status: 'not_found' });
+  }
+  
+  return response({ status: 'online' });
+}
+
+function getOrCreateSheet(ss, name) {
+  var s = ss.getSheetByName(name);
+  if (!s) {
+    s = ss.insertSheet(name);
+    if (name === "Users") {
+      s.appendRow(["Дата", "Имя", "Телефон", "Адрес", "Telegram ID", "Username", "Платформа"]);
+    } else if (name === "Orders") {
+      s.appendRow(["Дата", "ID Заказа", "Статус", "Филиал", "Тип", "Имя", "Телефон", "Сумма", "Состав", "Комментарий", "Адрес", "Telegram ID"]);
+    } else if (name === "Analytics") {
+      s.appendRow(["Дата", "Событие", "Данные", "Telegram ID", "Платформа"]);
+    }
+  }
+  return s;
 }
 
 function response(obj) {

@@ -1,8 +1,7 @@
 
 import React from 'react';
 import { CartItem } from '../types';
-import { ShoppingBag, Minus, Plus, Trash2, User, Phone, Store, MapPin, Truck, ChevronRight, MessageSquareText } from 'lucide-react';
-import { BRAND_ORANGE } from '../constants';
+import { ShoppingBag, Minus, Plus, Trash2, User, Phone, Store, MapPin, Truck, ChevronRight, MessageSquareText, Loader2 } from 'lucide-react';
 import { safeHaptic } from '../utils';
 import { Restaurant } from '../App';
 
@@ -19,13 +18,30 @@ interface CartProps {
   onCustomerDataChange: (f: string, v: string) => void;
   comment: string;
   onCommentChange: (v: string) => void;
+  onCheckout: () => void;
+  isSending: boolean;
 }
 
-const Cart: React.FC<CartProps> = ({ items, onUpdateQuantity, customerData, selectedRestaurant, onCustomerDataChange, comment, onCommentChange }) => {
+const Cart: React.FC<CartProps> = ({ 
+  items, 
+  onUpdateQuantity, 
+  customerData, 
+  selectedRestaurant, 
+  onCustomerDataChange, 
+  comment, 
+  onCommentChange,
+  onCheckout,
+  isSending
+}) => {
   const total = items.reduce((sum, item) => {
     const price = item.selectedOption ? item.selectedOption.price : item.price;
     return sum + price * item.quantity;
   }, 0);
+
+  const isDelivery = customerData.orderType === 'delivery';
+  const isValid = customerData.name.length > 1 && 
+                  customerData.phone.length > 5 && 
+                  (!isDelivery || (customerData.address && customerData.address.length >= 3));
 
   if (items.length === 0) return (
     <div className="py-32 flex flex-col items-center text-gray-300 animate-in zoom-in-95 duration-500">
@@ -194,9 +210,15 @@ const Cart: React.FC<CartProps> = ({ items, onUpdateQuantity, customerData, sele
               {total.toLocaleString()} <span className="text-[10px] uppercase font-bold text-gray-600 ml-1">сум</span>
             </span>
           </div>
-          <div className="w-14 h-14 bg-[#FF7A00] text-black rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(255,120,0,0.3)] active:scale-95 transition-all">
-            <ChevronRight className="w-7 h-7" />
-          </div>
+          <button 
+            onClick={() => { if(isValid && !isSending) onCheckout(); safeHaptic('medium'); }}
+            disabled={!isValid || isSending}
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(255,120,0,0.3)] active:scale-95 transition-all ${
+              isValid && !isSending ? 'bg-[#FF7A00] text-black cursor-pointer' : 'bg-gray-800 text-gray-600 cursor-not-allowed shadow-none'
+            }`}
+          >
+            {isSending ? <Loader2 className="w-7 h-7 animate-spin" /> : <ChevronRight className="w-7 h-7" />}
+          </button>
         </div>
       </div>
     </div>

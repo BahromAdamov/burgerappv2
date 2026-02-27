@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User, Phone, CheckCircle2, ShieldCheck, Share2, ArrowRight, Zap } from 'lucide-react';
+import { User, Phone, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
 import { StreetDogLogo } from './StreetDogLogo';
 import { BRAND_ORANGE } from '../constants';
 import { safeHaptic } from '../utils';
@@ -55,7 +55,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
           safeHaptic('warning');
         }
       });
-    } catch (err) {
+    } catch {
       setView('manual-name');
     }
   };
@@ -77,13 +77,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
   return (
     <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in duration-500 overflow-hidden">
       {/* Background Graphic */}
-      <div className="absolute top-0 left-0 right-0 h-[60vh] flex flex-col items-center justify-center rounded-b-[5rem] -z-10 shadow-2xl overflow-hidden" style={{ backgroundColor: BRAND_ORANGE }}>
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <StreetDogLogo className="h-48" iconColor="white" textColor="white" />
+      <div className="absolute top-0 left-0 right-0 h-[50vh] flex flex-col items-center justify-start pt-16 rounded-b-[5rem] -z-10 shadow-2xl overflow-hidden" style={{ backgroundColor: BRAND_ORANGE }}>
+        <div className="absolute inset-0 opacity-10 pointer-events-none flex items-center justify-center">
+            <StreetDogLogo className="h-64" iconColor="white" textColor="white" />
         </div>
-        <div className="flex flex-col items-center gap-6 animate-in zoom-in-90 duration-700 relative z-10">
-          <StreetDogLogo className="h-28" iconColor="white" textColor="black" />
-          <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.3em] mt-2 italic">Urgench N1 Burgers</p>
+        <div className="flex flex-col items-center gap-4 animate-in slide-in-from-top-8 duration-700 relative z-10">
+          <StreetDogLogo className="h-24" iconColor="white" textColor="black" />
+          <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.3em] italic">Urgench N1 Burgers</p>
         </div>
       </div>
 

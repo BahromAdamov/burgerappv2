@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Burger, ProductOption } from '../types';
-import { X, Flame, ShoppingCart, ImageOff, ChevronLeft } from 'lucide-react';
+import { X, Flame, ShoppingCart, ImageOff } from 'lucide-react';
 import { safeHaptic } from '../utils';
 
 interface ProductDetailsProps {

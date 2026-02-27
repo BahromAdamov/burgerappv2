@@ -3,7 +3,6 @@ import { BACKEND_API_URL } from './constants';
 
 export const safeShowAlert = (message: string, callback?: () => void) => {
   const tg = window.Telegram?.WebApp;
-  // showAlert доступен с версии 6.2
   if (tg?.isVersionAtLeast && tg.isVersionAtLeast('6.2') && tg.showAlert) {
     tg.showAlert(message, callback);
   } else {
@@ -14,7 +13,6 @@ export const safeShowAlert = (message: string, callback?: () => void) => {
 
 export const safeShowConfirm = (message: string, callback: (ok: boolean) => void) => {
   const tg = window.Telegram?.WebApp;
-  // showConfirm доступен с версии 6.2
   if (tg?.isVersionAtLeast && tg.isVersionAtLeast('6.2') && tg.showConfirm) {
     tg.showConfirm(message, callback);
   } else {
@@ -32,8 +30,8 @@ export const safeHaptic = (type: 'light' | 'medium' | 'heavy' | 'success' | 'err
       } else {
         tg.HapticFeedback.notificationOccurred(type as any);
       }
-    } catch (e) {
-      console.warn('Haptic not supported', e);
+    } catch {
+      console.warn('Haptic not supported');
     }
   }
 };
@@ -59,14 +57,14 @@ export const trackEvent = async (eventName: string, eventData: any = {}) => {
   };
 
   try {
-    // Используем mode: 'no-cors' для быстрой отправки аналитики без ожидания ответа
+    // Используем стандартный fetch без заголовков для минимизации ошибок CORS
     fetch(BACKEND_API_URL, {
       method: 'POST',
       mode: 'no-cors',
-      cache: 'no-cache',
+      credentials: 'omit',
       body: JSON.stringify(payload)
-    });
-  } catch (e) {
-    console.error('Analytics tracking failed', e);
+    }).catch(() => {}); // Игнорируем ошибки аналитики, чтобы не мешать пользователю
+  } catch {
+    // Тихий провал
   }
 };
