@@ -7,9 +7,10 @@ import { BRAND_ORANGE } from '../constants';
 
 interface OrderTypeSelectorProps {
   onSelect: (type: 'pickup' | 'delivery', address?: string) => void;
+  onBack?: () => void;
 }
 
-const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect }) => {
+const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack }) => {
   const [view, setView] = useState<'selection' | 'address'>('selection');
   const [address, setAddress] = useState('');
   const [flatNumber, setFlatNumber] = useState('');
@@ -84,7 +85,16 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect }) => {
 
   return (
     <div className="fixed inset-0 z-[85] bg-white flex flex-col animate-in fade-in duration-500 overflow-hidden">
-      <div className="p-6 pt-6 rounded-b-3xl shadow-lg text-center shrink-0" style={{ backgroundColor: BRAND_ORANGE }}>
+      <div className="p-6 pt-6 rounded-b-3xl shadow-lg text-center shrink-0 relative" style={{ backgroundColor: BRAND_ORANGE }}>
+        {onBack && view === 'selection' && (
+          <button
+            onClick={() => { onBack(); safeHaptic('light'); }}
+            className="absolute left-4 top-4 p-2.5 rounded-xl bg-black text-[#FF7800] shadow-md active:scale-90 transition-all"
+            aria-label="Назад"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+        )}
         <StreetDogLogo className="h-10 mx-auto drop-shadow-md mb-3" iconColor="white" textColor="black" />
         <h2 className="text-xl font-black text-black uppercase italic tracking-tighter mb-0.5 leading-none">
           {view === 'selection' ? 'Как заберёте?' : 'Адрес доставки'}

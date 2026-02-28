@@ -28,14 +28,6 @@ const LaunchScreen: React.FC<LaunchScreenProps> = ({ onStart }) => {
           <StreetDogLogo className="h-32 drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative z-10" iconColor="white" textColor="black" />
         </div>
         
-        <div className="space-y-2 animate-in slide-in-from-bottom-4 duration-1000 delay-300">
-          <h1 className="text-4xl font-black text-black italic uppercase tracking-tighter leading-none">
-            Лучшие бургеры <br /> Хорезма
-          </h1>
-          <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.4em] italic">
-            Street Dog • Urgench
-          </p>
-        </div>
       </div>
 
       <div className="w-full space-y-12 pb-12">
