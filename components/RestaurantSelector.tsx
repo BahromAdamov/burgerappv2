@@ -17,14 +17,14 @@ export const LOCATIONS: Restaurant[] = [
     name: 'STREET DOG (Центр)',
     address: 'ул. Аль-Хоразмий 71',
     phone: '+998 91 996-40-40',
-    image: 'https://lh3.googleusercontent.com/d/11c-opaIbkiZr5nHVwhKf5aom6ukwheT6'
+    image: 'https://drive.google.com/file/d/11c-opaIbkiZr5nHVwhKf5aom6ukwheT6/view?usp=sharing' // Placeholder, will be replaced
   },
   {
     id: 'branch_2',
     name: 'STREET DOG (Филиал 2)',
     address: 'ул. Хонка 175',
     phone: '+998 97 288-40-40',
-    image: 'https://lh3.googleusercontent.com/d/1yYOByyDC0z5rnsOYNBC-8HxFaBNvYk2x'
+    image: 'https://drive.google.com/file/d/1yYOByyDC0z5rnsOYNBC-8HxFaBNvYk2x/view?usp=sharing' // Placeholder, will be replaced
   }
 ];
 
