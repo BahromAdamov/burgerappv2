@@ -83,7 +83,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
         </div>
         <div className="flex flex-col items-center gap-4 animate-in slide-in-from-top-8 duration-700 relative z-10">
           <StreetDogLogo className="h-24" iconColor="white" textColor="black" />
-          <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.3em] italic">Urgench N1 Burgers</p>
         </div>
       </div>
 

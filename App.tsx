@@ -12,7 +12,7 @@ import Onboarding from './components/Onboarding';
 import RestaurantSelector from './components/RestaurantSelector';
 import OrderTypeSelector from './components/OrderTypeSelector';
 import FloatingStatus from './components/FloatingStatus';
-import { ShoppingCart, Utensils, Search, RefreshCw, Check, MapPin, History } from 'lucide-react';
+import { ShoppingCart, Utensils, Search, RefreshCw, Check, MapPin, History, ArrowLeft } from 'lucide-react';
 
 interface CustomerData {
   name: string;
@@ -358,6 +358,37 @@ export const App: React.FC = () => {
     }
   }, [activeTab, cart, customerData, cartTotal, activeOrderId, isSending, tg]);
 
+  const handleGlobalBack = () => {
+    if (selectedProduct) {
+      setSelectedProduct(null);
+      safeHaptic('light');
+      return;
+    }
+
+    if (activeTab !== 'menu') {
+      setActiveTab('menu');
+      safeHaptic('light');
+      return;
+    }
+
+    if (orderTypeChosen) {
+      setOrderTypeChosen(false);
+      localStorage.removeItem('sd_order_type_chosen');
+      safeHaptic('light');
+      return;
+    }
+
+    if (selectedRestaurant) {
+      setSelectedRestaurant(null);
+      setOrderTypeChosen(false);
+      localStorage.removeItem('sd_selected_restaurant');
+      localStorage.removeItem('sd_order_type_chosen');
+      safeHaptic('light');
+    }
+  };
+
+  const canGoBack = Boolean(selectedProduct) || activeTab !== 'menu' || orderTypeChosen || Boolean(selectedRestaurant);
+
   if (!isRegistered) return <Onboarding onConfirm={handleRegistrationComplete} />;
 
   if (!selectedRestaurant) return <RestaurantSelector onSelect={(r) => { 
@@ -367,12 +398,19 @@ export const App: React.FC = () => {
   }} />;
   
   if (!orderTypeChosen) return (
-    <OrderTypeSelector onSelect={(type, addr) => { 
-      setCustomerData(p => ({...p, orderType: type, address: addr || p.address})); 
-      setOrderTypeChosen(true); 
-      localStorage.setItem('sd_order_type_chosen', 'true');
-      safeHaptic('medium');
-    }} />
+    <OrderTypeSelector
+      onSelect={(type, addr) => {
+        setCustomerData(p => ({ ...p, orderType: type, address: addr || p.address }));
+        setOrderTypeChosen(true);
+        localStorage.setItem('sd_order_type_chosen', 'true');
+        safeHaptic('medium');
+      }}
+      onBack={() => {
+        setSelectedRestaurant(null);
+        localStorage.removeItem('sd_selected_restaurant');
+        safeHaptic('light');
+      }}
+    />
   );
 
   return (
@@ -409,8 +447,16 @@ export const App: React.FC = () => {
       )}
 
       <header className="sticky top-0 z-30 p-3 pt-2 rounded-b-[2rem] shadow-md" style={{ backgroundColor: BRAND_ORANGE }}>
-        <div className="flex justify-between items-center mb-2 px-1">
+        <div className="flex items-center justify-between mb-2 px-1">
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleGlobalBack}
+              disabled={!canGoBack}
+              className={`p-2 rounded-xl transition-all active:scale-90 ${canGoBack ? 'bg-black text-[#FF7800] shadow-md' : 'bg-white/20 text-black/40 cursor-not-allowed'}`}
+              aria-label="Назад"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </button>
              <StreetDogLogo className="h-7" iconColor="white" textColor="black" />
              <button 
                onClick={() => { setSelectedRestaurant(null); setOrderTypeChosen(false); safeHaptic('light'); }}
