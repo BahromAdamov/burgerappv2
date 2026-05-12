@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { Burger, ProductOption } from '../types';
 import { X, Flame, ShoppingCart, ImageOff } from 'lucide-react';
 import { safeHaptic } from '../utils';
+import { useI18n } from '../i18n';
 
 interface ProductDetailsProps {
   product: Burger;
@@ -11,6 +12,7 @@ interface ProductDetailsProps {
 }
 
 const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onClose, onAddToCart }) => {
+  const { t } = useI18n();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<ProductOption | undefined>(
     product.options && product.options.length > 0 ? product.options[0] : undefined
@@ -91,10 +93,10 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onClose, onAdd
             <h2 className="text-3xl font-black text-black tracking-tighter italic uppercase leading-[0.85]">{product.name}</h2>
           </div>
           <div className="text-right flex flex-col items-end">
-            <span className="text-[9px] uppercase font-black text-gray-300 tracking-[0.2em] mb-1">К оплате</span>
+            <span className="text-[9px] uppercase font-black text-gray-300 tracking-[0.2em] mb-1">{t('toPay')}</span>
             <p className="text-2xl font-black text-black leading-tight tracking-tighter italic">
               {currentPrice.toLocaleString()} 
-              <span className="text-[10px] uppercase font-bold text-gray-400 ml-1">сум</span>
+              <span className="text-[10px] uppercase font-bold text-gray-400 ml-1">{t('sum')}</span>
             </p>
           </div>
         </div>
@@ -102,7 +104,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onClose, onAdd
         <div className="space-y-10 mb-8">
           {product.options && product.options.length > 0 && (
             <section className="space-y-4">
-              <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-1">Размер заказа</h4>
+              <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-1">{t('orderSize')}</h4>
               <div className="flex flex-wrap gap-2.5">
                 {product.options.map((opt) => (
                   <button
@@ -122,7 +124,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onClose, onAdd
           )}
 
           <section className="space-y-3">
-            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-1">Описание</h4>
+            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-1">{t('description')}</h4>
             <p className="text-gray-500 text-[14px] leading-relaxed font-semibold italic opacity-80">
               {product.description}
             </p>
@@ -134,7 +136,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onClose, onAdd
           className="w-full bg-black text-[#FF7800] py-7 rounded-[2.5rem] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 active:scale-95 transition-all shadow-2xl hover:brightness-110 sticky bottom-0"
         >
           <ShoppingCart className="w-6 h-6" />
-          Добавить • {currentPrice.toLocaleString()} сум
+          {t('add')} • {currentPrice.toLocaleString()} {t('sum')}
         </button>
       </div>
     </div>

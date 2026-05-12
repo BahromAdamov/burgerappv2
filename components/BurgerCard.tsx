@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Burger } from '../types';
 import { Plus, Flame, Star, Coffee, UtensilsCrossed, ImageOff } from 'lucide-react';
 import { BRAND_ORANGE } from '../constants';
+import { useI18n } from '../i18n';
 
 interface BurgerCardProps {
   burger: Burger;
@@ -11,6 +12,7 @@ interface BurgerCardProps {
 }
 
 const BurgerCard: React.FC<BurgerCardProps> = ({ burger, onAddToCart, onClick }) => {
+  const { t } = useI18n();
   const [imgError, setImgError] = useState(false);
   const [imgLoading, setImgLoading] = useState(true);
 
@@ -44,7 +46,7 @@ const BurgerCard: React.FC<BurgerCardProps> = ({ burger, onAddToCart, onClick })
         {imgError || !hasImage ? (
           <div className="w-full h-full flex flex-col items-center justify-center bg-white text-gray-200">
             <ImageOff className="w-6 h-6 mb-1" />
-            <span className="text-[7px] font-black uppercase text-gray-300">Нет фото</span>
+            <span className="text-[7px] font-black uppercase text-gray-300">{t('noPhoto')}</span>
           </div>
         ) : (
           <img 
@@ -80,7 +82,7 @@ const BurgerCard: React.FC<BurgerCardProps> = ({ burger, onAddToCart, onClick })
           <div className="flex flex-col">
             <span className="font-black text-black text-[13px] tracking-tighter">
               {displayPrice.toLocaleString()} 
-              <span className="text-[8px] text-gray-300 ml-0.5 font-bold">СУМ</span>
+              <span className="text-[8px] text-gray-300 ml-0.5 font-bold">{t('sum').toUpperCase()}</span>
             </span>
           </div>
           <button 
