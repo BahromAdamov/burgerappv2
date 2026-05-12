@@ -3,6 +3,7 @@ import React from 'react';
 import { StreetDogLogo } from './StreetDogLogo';
 import { BRAND_ORANGE } from '../constants';
 import { safeHaptic } from '../utils';
+import { Language, useI18n } from '../i18n';
 import { Flame } from 'lucide-react';
 
 interface LaunchScreenProps {
@@ -11,6 +12,7 @@ interface LaunchScreenProps {
 
 const LaunchScreen: React.FC<LaunchScreenProps> = ({ onStart }) => {
   const tg = window.Telegram?.WebApp;
+  const { language, setLanguage, t } = useI18n();
 
   const handleStart = () => {
     safeHaptic('heavy');
@@ -20,6 +22,11 @@ const LaunchScreen: React.FC<LaunchScreenProps> = ({ onStart }) => {
     onStart();
   };
 
+  const chooseLanguage = (nextLanguage: Language) => {
+    setLanguage(nextLanguage);
+    safeHaptic('light');
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex flex-col items-center justify-between p-8 text-center animate-in fade-in duration-700" style={{ backgroundColor: BRAND_ORANGE }}>
       <div className="flex-grow flex flex-col items-center justify-center space-y-8">
@@ -27,7 +34,27 @@ const LaunchScreen: React.FC<LaunchScreenProps> = ({ onStart }) => {
           <div className="absolute -inset-10 bg-white/20 blur-3xl rounded-full animate-pulse" />
           <StreetDogLogo className="h-32 drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative z-10" iconColor="white" textColor="black" />
         </div>
-        
+
+        <div className="w-full max-w-xs space-y-3">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-black uppercase italic tracking-tight text-black">{t('chooseLanguage')}</h1>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/50">{t('chooseLanguageSubtitle')}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => chooseLanguage('uz')}
+              className={`py-4 rounded-2xl text-xs font-black uppercase tracking-widest border-2 active:scale-95 transition-all ${language === 'uz' ? 'bg-black text-[#FF7800] border-black shadow-xl' : 'bg-white/30 text-black border-white/30'}`}
+            >
+              {t('uzbek')}
+            </button>
+            <button
+              onClick={() => chooseLanguage('ru')}
+              className={`py-4 rounded-2xl text-xs font-black uppercase tracking-widest border-2 active:scale-95 transition-all ${language === 'ru' ? 'bg-black text-[#FF7800] border-black shadow-xl' : 'bg-white/30 text-black border-white/30'}`}
+            >
+              {t('russian')}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="w-full space-y-12 pb-12">
@@ -43,7 +70,7 @@ const LaunchScreen: React.FC<LaunchScreenProps> = ({ onStart }) => {
         >
           <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
           <span className="text-4xl font-black italic uppercase tracking-wider" style={{ color: BRAND_ORANGE }}>
-            НАЧАТЬ
+            {t('start')}
           </span>
         </button>
       </div>

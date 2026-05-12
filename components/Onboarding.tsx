@@ -4,12 +4,14 @@ import { User, Phone, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
 import { StreetDogLogo } from './StreetDogLogo';
 import { BRAND_ORANGE } from '../constants';
 import { safeHaptic } from '../utils';
+import { Language, useI18n } from '../i18n';
 
 interface OnboardingProps {
   onConfirm: (data: { name: string; phone: string; address: string }) => void;
 }
 
 const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
+  const { language, setLanguage, t } = useI18n();
   const tg = window.Telegram?.WebApp;
   const tgUser = tg?.initDataUnsafe?.user;
   
@@ -63,7 +65,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
   const handleManualPhoneSubmit = () => {
     const cleanPhone = data.phone.replace(/\D/g, '');
     if (cleanPhone.length < 7) {
-      setError('Введите корректный номер');
+      setError(t('enterValidPhone'));
       safeHaptic('error');
       return;
     }
@@ -92,8 +94,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
           {view === 'welcome' && (
             <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-500">
               <div className="space-y-2">
-                <h2 className="text-xl font-black text-gray-900 uppercase italic">Добро пожаловать!</h2>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Для заказа необходимо авторизоваться</p>
+                <h2 className="text-xl font-black text-gray-900 uppercase italic">{t('welcome')}</h2>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('authRequired')}</p>
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  {(['uz', 'ru'] as Language[]).map((item) => (
+                    <button
+                      key={item}
+                      onClick={() => { setLanguage(item); safeHaptic('light'); }}
+                      className={`py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest border transition-all ${language === item ? 'bg-black text-[#FF7800] border-black' : 'bg-gray-50 text-gray-400 border-gray-100'}`}
+                    >
+                      {item === 'uz' ? t('uzbek') : t('russian')}
+                    </button>
+                  ))}
+                </div>
               </div>
               
               <div className="space-y-3 pt-2">
@@ -103,13 +116,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
                   style={{ color: BRAND_ORANGE }}
                 >
                   <Zap className="w-5 h-5 fill-current" />
-                  БЫСТРЫЙ ВХОД
+                  {t('quickLogin')}
                 </button>
                 <button
                   onClick={() => { setView('manual-name'); safeHaptic('light'); }}
                   className="w-full bg-gray-50 text-gray-400 py-5 rounded-3xl font-black uppercase text-[10px] tracking-widest hover:text-black transition-colors"
                 >
-                  Ввести вручную
+                  {t('manualInput')}
                 </button>
               </div>
             </div>
@@ -118,7 +131,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
           {view === 'manual-name' && (
             <div className="space-y-6 animate-in slide-in-from-right-8 duration-500">
               <div className="text-left space-y-2">
-                <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4">Как вас зовут?</label>
+                <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4">{t('yourName')}</label>
                 <div className="relative group">
                   <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-[#FF7800] transition-colors" />
                   <input
@@ -126,7 +139,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
                     type="text"
                     value={data.name}
                     onChange={(e) => { setData({ ...data, name: e.target.value }); setError(null); }}
-                    placeholder="Ваше имя..."
+                    placeholder={t('namePlaceholder')}
                     className="w-full bg-gray-50 rounded-2xl py-5 pl-14 pr-4 text-sm font-bold border-2 border-transparent focus:border-[#FF7800] outline-none transition-all shadow-inner"
                   />
                 </div>
@@ -137,7 +150,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
                 className="w-full bg-black py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all"
                 style={{ color: BRAND_ORANGE }}
               >
-                ПРОДОЛЖИТЬ <ArrowRight className="w-4 h-4 ml-1 inline" />
+                {t('continue')} <ArrowRight className="w-4 h-4 ml-1 inline" />
               </button>
             </div>
           )}
@@ -145,7 +158,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
           {view === 'manual-phone' && (
             <div className="space-y-6 animate-in slide-in-from-right-8 duration-500">
               <div className="text-left space-y-2">
-                <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4">Ваш номер</label>
+                <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4">{t('yourPhone')}</label>
                 <div className="relative group">
                   <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-[#FF7800] transition-colors" />
                   <input
@@ -158,7 +171,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
                       setData({ ...data, phone: val }); 
                       setError(null); 
                     }}
-                    placeholder="+998..."
+                    placeholder={t('phonePlaceholder')}
                     className={`w-full bg-gray-50 rounded-2xl py-5 pl-14 pr-4 text-sm font-bold border-2 transition-all shadow-inner outline-none ${error ? 'border-red-500' : 'border-transparent focus:border-[#FF7800]'}`}
                   />
                 </div>
@@ -174,7 +187,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
                     className="flex-grow bg-black py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all"
                     style={{ color: BRAND_ORANGE }}
                   >
-                    ГОТОВО
+                    {t('done')}
                   </button>
               </div>
             </div>
@@ -189,8 +202,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onConfirm }) => {
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-black uppercase tracking-widest text-black">Почти готово...</p>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Проверка данных</p>
+                <p className="text-sm font-black uppercase tracking-widest text-black">{t('almostReady')}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('dataCheck')}</p>
               </div>
             </div>
           )}

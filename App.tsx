@@ -12,6 +12,8 @@ import Onboarding from './components/Onboarding';
 import RestaurantSelector from './components/RestaurantSelector';
 import OrderTypeSelector from './components/OrderTypeSelector';
 import FloatingStatus from './components/FloatingStatus';
+import LaunchScreen from './components/LaunchScreen';
+import { localizeRestaurantText, useI18n } from './i18n';
 import { ShoppingCart, Utensils, Search, RefreshCw, Check, MapPin, History, ArrowLeft } from 'lucide-react';
 
 interface CustomerData {
@@ -71,7 +73,9 @@ const parseOptions = (val: string | undefined): ProductOption[] | undefined => {
 
 export const App: React.FC = () => {
   const tg = window.Telegram?.WebApp;
-  
+  const { t, language } = useI18n();
+  const [hasStarted, setHasStarted] = useState<boolean>(() => localStorage.getItem('sd_started') === 'true');
+
   const [isRegistered, setIsRegistered] = useState<boolean>(() => localStorage.getItem('sd_registered') === 'true');
 
   useEffect(() => {
@@ -86,11 +90,11 @@ export const App: React.FC = () => {
             tgUser: tg?.initDataUnsafe?.user || { id: 'web-user', first_name: d.name },
             platform: tg?.platform || 'web'
           };
-          fetch(BACKEND_API_URL, { 
-            method: 'POST', 
+          fetch(BACKEND_API_URL, {
+            method: 'POST',
             mode: 'no-cors', // Для регистрации можно использовать no-cors, так как нам не важен ответ
             credentials: 'omit',
-            body: JSON.stringify(payload) 
+            body: JSON.stringify(payload)
           }).then(() => {
             localStorage.setItem('sd_user_synced', 'true');
           }).catch(() => {}); // Тихий провал для фоновой синхронизации
@@ -119,7 +123,7 @@ export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isStatusMinimized, setIsStatusMinimized] = useState<boolean>(false);
-  
+
   const checkoutHandlerRef = React.useRef<() => void>(() => {});
 
   const [customerData, setCustomerData] = useState<CustomerData>(() => {
@@ -140,7 +144,7 @@ export const App: React.FC = () => {
   }, [cart]);
 
   const cartCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
-  
+
   const availableCategories = useMemo(() => {
     const cats = new Set<string>();
     allProducts.forEach(p => {
@@ -153,12 +157,12 @@ export const App: React.FC = () => {
     if (!selectedRestaurant) return [];
     return allProducts.filter(p => {
       if (!p.available) return false;
-      const matchesCategory = selectedCategory === 'All' || 
+      const matchesCategory = selectedCategory === 'All' ||
         p.category.toLowerCase().trim() === selectedCategory.toLowerCase().trim();
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesRestaurant = !p.restaurantIds || 
-                                p.restaurantIds.length === 0 || 
-                                p.restaurantIds.some(id => id.toLowerCase() === 'all') || 
+      const matchesRestaurant = !p.restaurantIds ||
+                                p.restaurantIds.length === 0 ||
+                                p.restaurantIds.some(id => id.toLowerCase() === 'all') ||
                                 p.restaurantIds.includes(selectedRestaurant.id);
       return matchesCategory && matchesSearch && matchesRestaurant;
     });
@@ -180,11 +184,11 @@ export const App: React.FC = () => {
 
     try {
       // Отправляем без заголовков, чтобы избежать CORS preflight ошибок 'Load failed'
-      fetch(BACKEND_API_URL, { 
-        method: 'POST', 
+      fetch(BACKEND_API_URL, {
+        method: 'POST',
         mode: 'no-cors',
         credentials: 'omit',
-        body: JSON.stringify(payload) 
+        body: JSON.stringify(payload)
       }).then(() => {
         localStorage.setItem('sd_user_synced', 'true');
       }).catch(() => {});
@@ -198,17 +202,17 @@ export const App: React.FC = () => {
 
   const handleCheckout = useCallback(async () => {
     if (isSending || cart.length === 0) return;
-    
+
     const isDelivery = customerData.orderType === 'delivery';
     if (customerData.name.trim().length < 2 || customerData.phone.trim().length < 5 || (isDelivery && (!customerData.address || customerData.address.trim().length < 3))) {
-      safeShowAlert("Пожалуйста, заполните Имя, Телефон и Адрес!");
+      safeShowAlert(t('fillNamePhoneAddress'));
       return;
     }
 
     setIsSending(true);
     if (tg?.MainButton) tg.MainButton.showProgress(false);
-    
-    const orderPayload = { 
+
+    const orderPayload = {
       type: 'order',
       name: customerData.name,
       phone: customerData.phone,
@@ -220,25 +224,25 @@ export const App: React.FC = () => {
         price: item.selectedOption ? item.selectedOption.price : item.price,
         quantity: item.quantity,
         option: item.selectedOption ? item.selectedOption.name : null
-      })), 
-      total: cartTotal, 
-      comment: orderComment, 
+      })),
+      total: cartTotal,
+      comment: orderComment,
       restaurant: selectedRestaurant,
       tgUser: tg?.initDataUnsafe?.user || { id: "unknown", first_name: customerData.name }
     };
 
     try {
       console.log("🚀 Sending Order...");
-      
+
       /**
        * КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Используем максимально простой запрос.
        * Мы не устанавливаем Content-Type и не форсируем mode: 'cors',
        * чтобы избежать preflight OPTIONS запроса, который GAS может отклонить.
        */
-      const res = await fetch(BACKEND_API_URL, { 
+      const res = await fetch(BACKEND_API_URL, {
         method: 'POST',
         credentials: 'omit',
-        body: JSON.stringify(orderPayload) 
+        body: JSON.stringify(orderPayload)
       });
 
       if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
@@ -258,7 +262,7 @@ export const App: React.FC = () => {
         safeHaptic('success');
         console.log("✅ Order Success:", result.orderId);
         if (result.tg) console.log("🤖 Telegram Response:", result.tg);
-        
+
         setActiveOrderId(result.orderId);
         localStorage.setItem('sd_active_order_id', result.orderId);
         setCart([]);
@@ -269,13 +273,12 @@ export const App: React.FC = () => {
 
     } catch {
       console.error("❌ Checkout Error:", "Unknown error");
-      const errorMsg = "Проблема с сетью или доступом к серверу. Попробуйте еще раз или проверьте интернет.";
-      safeShowAlert("Ошибка отправки: " + errorMsg);
+      safeShowAlert(t('checkoutError'));
     } finally {
       setIsSending(false);
       if (tg?.MainButton) tg.MainButton.hideProgress();
     }
-  }, [tg, isSending, customerData, cart, cartTotal, orderComment, selectedRestaurant]);
+  }, [tg, isSending, customerData, cart, cartTotal, orderComment, selectedRestaurant, t]);
 
   // Обновляем реф при каждом изменении handleCheckout
   useEffect(() => {
@@ -309,54 +312,54 @@ export const App: React.FC = () => {
           restaurantIds: parseList(cols[10])
         };
       }).filter((p): p is Burger => p !== null && !!p.name);
-      
+
       if (parsed.length === 0) throw new Error("Меню пустое. Проверьте таблицу.");
-      
+
       setAllProducts(parsed);
       localStorage.setItem('sd_menu_cache', JSON.stringify(parsed));
-    } catch (e: any) { 
+    } catch (e: any) {
       console.error("Menu Load Error:", e);
-      setError(e.message); 
-    } finally { 
-      setLoading(false); 
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchData();
-    if (tg) { 
-      tg.ready(); 
-      tg.expand(); 
+    if (tg) {
+      tg.ready();
+      tg.expand();
     }
   }, [tg, fetchData]);
 
   useEffect(() => {
     if (!tg || !tg.MainButton) return;
-    
+
     const onMainButtonClick = () => {
       checkoutHandlerRef.current();
     };
 
     if (activeTab === 'cart' && cart.length > 0 && !activeOrderId) {
       const isDelivery = customerData.orderType === 'delivery';
-      const isValid = customerData.name.trim().length > 1 && 
-                      customerData.phone.trim().length > 5 && 
+      const isValid = customerData.name.trim().length > 1 &&
+                      customerData.phone.trim().length > 5 &&
                       (!isDelivery || (customerData.address && customerData.address.trim().length >= 3));
-      
+
       tg.MainButton.setParams({
-        text: isSending ? 'ОТПРАВЛЯЕМ...' : (isValid ? `ОФОРМИТЬ: ${cartTotal.toLocaleString()} СУМ` : 'ЗАПОЛНИТЕ ДАННЫЕ'),
+        text: isSending ? t('sending') : (isValid ? `${t('checkout')}: ${cartTotal.toLocaleString()} ${t('sum').toUpperCase()}` : t('fillData')),
         color: isValid && !isSending ? '#000000' : '#E5E7EB',
         textColor: isValid && !isSending ? BRAND_ORANGE : '#9CA3AF',
         isVisible: true,
         isActive: !!(isValid && !isSending)
       });
-      
+
       tg.MainButton.onClick(onMainButtonClick);
       return () => tg.MainButton.offClick(onMainButtonClick);
-    } else { 
-      tg.MainButton.hide(); 
+    } else {
+      tg.MainButton.hide();
     }
-  }, [activeTab, cart, customerData, cartTotal, activeOrderId, isSending, tg]);
+  }, [activeTab, cart, customerData, cartTotal, activeOrderId, isSending, tg, t]);
 
   const handleGlobalBack = () => {
     if (selectedProduct) {
@@ -389,14 +392,16 @@ export const App: React.FC = () => {
 
   const canGoBack = Boolean(selectedProduct) || activeTab !== 'menu' || orderTypeChosen || Boolean(selectedRestaurant);
 
+  if (!hasStarted) return <LaunchScreen onStart={() => { localStorage.setItem('sd_started', 'true'); setHasStarted(true); }} />;
+
   if (!isRegistered) return <Onboarding onConfirm={handleRegistrationComplete} />;
 
-  if (!selectedRestaurant) return <RestaurantSelector onSelect={(r) => { 
-    setSelectedRestaurant(r); 
+  if (!selectedRestaurant) return <RestaurantSelector onSelect={(r) => {
+    setSelectedRestaurant(r);
     localStorage.setItem('sd_selected_restaurant', JSON.stringify(r));
-    safeHaptic('medium'); 
+    safeHaptic('medium');
   }} />;
-  
+
   if (!orderTypeChosen) return (
     <OrderTypeSelector
       onSelect={(type, addr) => {
@@ -414,13 +419,13 @@ export const App: React.FC = () => {
   );
 
   return (
-    <div 
+    <div
       className={`min-h-screen pb-20 flex flex-col max-w-md mx-auto bg-gray-50/30 ${activeOrderId ? (isStatusMinimized ? 'pt-[80px]' : 'pt-[340px]') : ''}`}
     >
       {activeOrderId && (
-        <FloatingStatus 
+        <FloatingStatus
           key={activeOrderId}
-          orderId={activeOrderId} 
+          orderId={activeOrderId}
           orderType={customerData.orderType}
           restaurantPhone={selectedRestaurant?.phone}
           isMinimized={isStatusMinimized}
@@ -428,7 +433,7 @@ export const App: React.FC = () => {
           onClose={() => {
             setActiveOrderId(null);
             localStorage.removeItem('sd_active_order_id');
-          }} 
+          }}
         />
       )}
 
@@ -453,19 +458,19 @@ export const App: React.FC = () => {
               onClick={handleGlobalBack}
               disabled={!canGoBack}
               className={`p-2 rounded-xl transition-all active:scale-90 ${canGoBack ? 'bg-black text-[#FF7800] shadow-md' : 'bg-white/20 text-black/40 cursor-not-allowed'}`}
-              aria-label="Назад"
+              aria-label={t('back')}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
             </button>
              <StreetDogLogo className="h-7" iconColor="white" textColor="black" />
-             <button 
+             <button
                onClick={() => { setSelectedRestaurant(null); setOrderTypeChosen(false); safeHaptic('light'); }}
                className="bg-black/10 backdrop-blur-md px-2.5 py-1 rounded-xl flex items-center gap-1 border border-white/20 active:scale-95 transition-all"
              >
                <MapPin className="w-2.5 h-2.5 text-black" />
-               <span className="text-[8px] font-black uppercase text-black max-w-[70px] truncate">{selectedRestaurant.name}</span>
+               <span className="text-[8px] font-black uppercase text-black max-w-[70px] truncate">{localizeRestaurantText(selectedRestaurant.name, language)}</span>
              </button>
-             <button 
+             <button
                onClick={() => { fetchData(); safeHaptic('medium'); }}
                className={`p-2 rounded-xl transition-all active:scale-90 bg-white/20 text-black ${loading ? 'animate-spin' : ''}`}
              >
@@ -486,11 +491,11 @@ export const App: React.FC = () => {
           <div className="space-y-2 px-1 pb-0.5 animate-in slide-in-from-top-1 duration-300">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-              <input type="text" placeholder="Поиск..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white rounded-xl py-1.5 pl-9 pr-3 text-[10px] font-bold outline-none shadow-sm" />
+              <input type="text" placeholder={t('search')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white rounded-xl py-1.5 pl-9 pr-3 text-[10px] font-bold outline-none shadow-sm" />
             </div>
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
               {availableCategories.map(cat => (
-                <button key={cat} onClick={() => { setSelectedCategory(cat); safeHaptic('light'); }} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${selectedCategory === cat ? 'bg-black text-[#FF7800]' : 'bg-white/30 text-black'}`}>{cat === 'All' ? 'Всё' : cat}</button>
+                <button key={cat} onClick={() => { setSelectedCategory(cat); safeHaptic('light'); }} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${selectedCategory === cat ? 'bg-black text-[#FF7800]' : 'bg-white/30 text-black'}`}>{cat === 'All' ? t('all') : cat}</button>
               ))}
             </div>
           </div>
@@ -501,14 +506,14 @@ export const App: React.FC = () => {
         {loading && allProducts.length === 0 ? (
           <div className="py-24 flex flex-col items-center text-gray-300">
             <RefreshCw className="w-8 h-8 animate-spin mb-3 text-[#FF7800]" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Загрузка меню...</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{t('loadingMenu')}</span>
           </div>
         ) : error && allProducts.length === 0 ? (
           <div className="py-24 flex flex-col items-center text-center px-6">
             <RefreshCw className="w-8 h-8 mb-4 text-red-400 opacity-50" />
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">{error}</p>
             <button onClick={fetchData} className="bg-black text-[#FF7800] px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">
-              Попробовать снова
+              {t('tryAgain')}
             </button>
           </div>
         ) : activeTab === 'menu' ? (
@@ -529,16 +534,16 @@ export const App: React.FC = () => {
         ) : activeTab === 'history' ? (
           <OrderHistory phone={customerData.phone} />
         ) : (
-          <Cart 
-            items={cart} 
+          <Cart
+            items={cart}
             onUpdateQuantity={(id, delta, opt) => {
               setCart(p => p.map(i => (i.id === id && i.selectedOption?.name === opt) ? {...i, quantity: Math.max(0, i.quantity + delta)} : i).filter(i => i.quantity > 0));
               safeHaptic('light');
-            }} 
-            customerData={customerData as any} 
-            selectedRestaurant={selectedRestaurant} 
-            onCustomerDataChange={(f,v) => setCustomerData(p => ({...p, [f]: v}))} 
-            comment={orderComment} 
+            }}
+            customerData={customerData as any}
+            selectedRestaurant={selectedRestaurant}
+            onCustomerDataChange={(f,v) => setCustomerData(p => ({...p, [f]: v}))}
+            comment={orderComment}
             onCommentChange={setOrderComment}
             onCheckout={handleCheckout}
             isSending={isSending}
@@ -557,15 +562,15 @@ export const App: React.FC = () => {
       }} />}
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t px-4 py-2 flex justify-around shadow-2xl">
-        <NavBtn active={activeTab === 'menu'} onClick={() => { setActiveTab('menu'); safeHaptic('light'); }} icon={<Utensils className="w-4 h-4" />} label="Меню" />
-        <NavBtn 
-          active={activeTab === 'cart'} 
-          onClick={() => { setActiveTab('cart'); safeHaptic('light'); }} 
-          icon={<ShoppingCart className="w-4 h-4" />} 
-          label="Корзина" 
+        <NavBtn active={activeTab === 'menu'} onClick={() => { setActiveTab('menu'); safeHaptic('light'); }} icon={<Utensils className="w-4 h-4" />} label={t('menu')} />
+        <NavBtn
+          active={activeTab === 'cart'}
+          onClick={() => { setActiveTab('cart'); safeHaptic('light'); }}
+          icon={<ShoppingCart className="w-4 h-4" />}
+          label={t('cart')}
           badge={cartCount > 0 ? cartCount : undefined}
         />
-        <NavBtn active={activeTab === 'history'} onClick={() => { setActiveTab('history'); safeHaptic('light'); }} icon={<History className="w-4 h-4" />} label="История" />
+        <NavBtn active={activeTab === 'history'} onClick={() => { setActiveTab('history'); safeHaptic('light'); }} icon={<History className="w-4 h-4" />} label={t('history')} />
       </nav>
     </div>
   );

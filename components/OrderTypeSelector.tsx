@@ -4,6 +4,7 @@ import { Truck, Store, ChevronRight, MapPin, Package, ArrowLeft, CheckCircle2, L
 import { StreetDogLogo } from './StreetDogLogo';
 import { safeShowAlert, safeHaptic } from '../utils';
 import { BRAND_ORANGE } from '../constants';
+import { useI18n } from '../i18n';
 
 interface OrderTypeSelectorProps {
   onSelect: (type: 'pickup' | 'delivery', address?: string) => void;
@@ -11,6 +12,7 @@ interface OrderTypeSelectorProps {
 }
 
 const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack }) => {
+  const { t } = useI18n();
   const [view, setView] = useState<'selection' | 'address'>('selection');
   const [address, setAddress] = useState('');
   const [flatNumber, setFlatNumber] = useState('');
@@ -27,7 +29,7 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
     safeHaptic('medium');
 
     if (!navigator.geolocation) {
-      safeShowAlert("Геолокация не поддерживается вашим устройством.");
+      safeShowAlert(t('geoUnsupported'));
       setIsLocating(false);
       return;
     }
@@ -53,7 +55,7 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
             safeHaptic('success');
           } else {
             setAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-            safeShowAlert("Адрес определен в виде координат.");
+            safeShowAlert(t('coordsAddress'));
           }
         } catch {
           setAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
@@ -62,7 +64,7 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
         }
       },
       () => {
-        safeShowAlert("Не удалось получить доступ к GPS. Введите адрес вручную.");
+        safeShowAlert(t('gpsFailed'));
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 8000 }
@@ -72,14 +74,14 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
   const handleConfirmDelivery = () => {
     const finalAddressParts = [];
     if (address) finalAddressParts.push(address.trim());
-    if (flatNumber) finalAddressParts.push(`кв. ${flatNumber}`);
+    if (flatNumber) finalAddressParts.push(`${t('flatOffice')} ${flatNumber}`);
     if (deliveryComment) finalAddressParts.push(`(${deliveryComment})`);
     
     const fullAddress = finalAddressParts.join(', ');
     if (address.trim().length >= 3) {
       onSelect('delivery', fullAddress);
     } else {
-      safeShowAlert("Введите корректный адрес");
+      safeShowAlert(t('enterValidAddress'));
     }
   };
 
@@ -90,17 +92,17 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
           <button
             onClick={() => { onBack(); safeHaptic('light'); }}
             className="absolute left-4 top-4 p-2.5 rounded-xl bg-black text-[#FF7800] shadow-md active:scale-90 transition-all"
-            aria-label="Назад"
+            aria-label={t('back')}
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
         )}
         <StreetDogLogo className="h-10 mx-auto drop-shadow-md mb-3" iconColor="white" textColor="black" />
         <h2 className="text-xl font-black text-black uppercase italic tracking-tighter mb-0.5 leading-none">
-          {view === 'selection' ? 'Как заберёте?' : 'Адрес доставки'}
+          {view === 'selection' ? t('howPickup') : t('deliveryAddress')}
         </h2>
         <p className="text-[9px] font-black text-black/60 uppercase tracking-widest italic opacity-80">
-          {view === 'selection' ? 'Способ получения' : 'Куда привезти заказ?'}
+          {view === 'selection' ? t('receiveMethod') : t('deliveryDestination')}
         </p>
       </div>
 
@@ -115,8 +117,8 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
                 <Store className="w-8 h-8 text-[#FF7800] group-active:text-white" />
               </div>
               <div className="flex-grow text-left">
-                <h3 className="text-lg font-black text-gray-900 uppercase italic tracking-tight">Самовывоз</h3>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Из кафе</p>
+                <h3 className="text-lg font-black text-gray-900 uppercase italic tracking-tight">{t('pickup')}</h3>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{t('fromCafe')}</p>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-200" />
             </button>
@@ -129,8 +131,8 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
                 <Truck className="w-8 h-8 text-[#FF7800]" />
               </div>
               <div className="flex-grow text-left">
-                <h3 className="text-lg font-black text-gray-900 uppercase italic tracking-tight">Доставка</h3>
-                <p className="text-[9px] font-black text-gray-500 uppercase tracking-wider leading-tight">Доставка в радиусе 5км 10.000</p>
+                <h3 className="text-lg font-black text-gray-900 uppercase italic tracking-tight">{t('delivery')}</h3>
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-wider leading-tight">{t('deliveryRadius')}</p>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-200" />
             </button>
@@ -139,7 +141,7 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
           <div className="space-y-4 animate-in slide-in-from-bottom-3 duration-300 py-2">
             <div className="space-y-3">
               <div className="relative group">
-                <label className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] ml-4 mb-1 block">Улица и дом</label>
+                <label className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] ml-4 mb-1 block">{t('streetAndHouse')}</label>
                 <div className="relative mb-3">
                   <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF7800]" />
                   <input
@@ -147,7 +149,7 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Ваш адрес..."
+                    placeholder={t('yourAddress')}
                     className="w-full bg-gray-50 rounded-[2rem] py-5 pl-12 pr-4 text-sm font-bold border-2 border-transparent focus:border-[#FF7800] outline-none shadow-inner transition-all focus:bg-white"
                   />
                 </div>
@@ -158,12 +160,12 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
                   className="w-full py-4 bg-black text-[#FF7800] rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg disabled:opacity-50"
                 >
                   {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Compass className="w-4 h-4" />}
-                  Найти меня
+                  {t('findMe')}
                 </button>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-gray-300 uppercase tracking-widest ml-4 block">Кв / Офис</label>
+                <label className="text-[9px] font-black text-gray-300 uppercase tracking-widest ml-4 block">{t('flatOffice')}</label>
                 <input
                   type="text"
                   value={flatNumber}
@@ -174,14 +176,14 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
               </div>
 
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-gray-300 uppercase tracking-widest ml-4 block">Комментарий</label>
+                <label className="text-[9px] font-black text-gray-300 uppercase tracking-widest ml-4 block">{t('comment')}</label>
                 <div className="relative">
                   <MessageSquare className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300" />
                   <input
                     type="text"
                     value={deliveryComment}
                     onChange={(e) => setDeliveryComment(e.target.value)}
-                    placeholder="Ориентиры, подъезд..."
+                    placeholder={t('commentPlaceholder')}
                     className="w-full bg-gray-50 rounded-xl py-4 pl-10 pr-4 text-sm font-bold border-2 border-transparent focus:border-[#FF7800] outline-none shadow-inner transition-all focus:bg-white"
                   />
                 </div>
@@ -200,7 +202,7 @@ const OrderTypeSelector: React.FC<OrderTypeSelectorProps> = ({ onSelect, onBack 
                 onClick={handleConfirmDelivery}
                 className="flex-grow bg-black text-[#FF7800] py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 disabled:opacity-30 transition-all flex items-center justify-center gap-2"
               >
-                Подтвердить <CheckCircle2 className="w-4 h-4" />
+                {t('confirm')} <CheckCircle2 className="w-4 h-4" />
               </button>
             </div>
           </div>

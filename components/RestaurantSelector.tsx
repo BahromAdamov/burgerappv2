@@ -4,6 +4,7 @@ import { MapPin, ChevronRight, Phone, CheckCircle2 } from 'lucide-react';
 import { StreetDogLogo } from './StreetDogLogo';
 import { BRAND_ORANGE } from '../constants';
 import { Restaurant } from '../App';
+import { localizeRestaurantText, useI18n } from '../i18n';
 
 interface RestaurantSelectorProps {
   currentId?: string;
@@ -29,12 +30,13 @@ export const LOCATIONS: Restaurant[] = [
 ];
 
 const RestaurantSelector: React.FC<RestaurantSelectorProps> = ({ currentId, onSelect }) => {
+  const { t, language } = useI18n();
   return (
     <div className="fixed inset-0 z-[90] bg-white flex flex-col animate-in fade-in duration-500 overflow-hidden">
       <div className="p-6 pt-6 rounded-b-[3rem] shadow-xl text-center relative z-10" style={{ backgroundColor: BRAND_ORANGE }}>
         <StreetDogLogo className="h-12 mx-auto drop-shadow-lg mb-3" iconColor="white" textColor="black" />
-        <h2 className="text-xl font-black text-black uppercase italic tracking-tighter mb-0.5">Где заказываем?</h2>
-        <p className="text-[9px] font-black text-black/60 uppercase tracking-widest">Выберите ближайший филиал</p>
+        <h2 className="text-xl font-black text-black uppercase italic tracking-tighter mb-0.5">{t('whereOrder')}</h2>
+        <p className="text-[9px] font-black text-black/60 uppercase tracking-widest">{t('chooseNearestBranch')}</p>
       </div>
 
       <div className="flex-grow p-5 flex flex-col gap-3 justify-center max-w-md mx-auto w-full overflow-y-auto no-scrollbar">
@@ -55,7 +57,7 @@ const RestaurantSelector: React.FC<RestaurantSelectorProps> = ({ currentId, onSe
                 {isSelected && (
                   <div className="bg-black text-white px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
                     <CheckCircle2 className="w-2.5 h-2.5" />
-                    <span className="text-[7px] font-black uppercase tracking-widest">Выбрано</span>
+                    <span className="text-[7px] font-black uppercase tracking-widest">{t('selected')}</span>
                   </div>
                 )}
               </div>
@@ -70,8 +72,8 @@ const RestaurantSelector: React.FC<RestaurantSelectorProps> = ({ currentId, onSe
                   />
                 )}
                 <div className="space-y-0.5 flex-1">
-                  <h3 className="text-base font-black text-gray-900 uppercase italic tracking-tight">{loc.name}</h3>
-                  <p className="text-[10px] font-medium text-gray-400 leading-tight line-clamp-1">{loc.address}</p>
+                  <h3 className="text-base font-black text-gray-900 uppercase italic tracking-tight">{localizeRestaurantText(loc.name, language)}</h3>
+                  <p className="text-[10px] font-medium text-gray-400 leading-tight line-clamp-1">{localizeRestaurantText(loc.address, language)}</p>
                   {loc.phone && (
                     <div className="flex items-center gap-1 mt-1 text-gray-500 bg-gray-50 w-fit px-2 py-0.5 rounded-lg border border-gray-100">
                       <Phone className="w-2.5 h-2.5 text-[#FF7800]" />
